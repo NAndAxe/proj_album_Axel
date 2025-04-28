@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pokolgép Albumok</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #1c1c1c; color: #eee; }
+    h1 { color: #f00; }
+    input, button, select { margin: 5px 0; padding: 2px; font-size: 1rem; }
+    .album { margin: 10px 0; padding: 10px; background: #333; border-radius: 6px; }
+    .album span { display: inline-block; width: 200px; }
+    .form-container { margin-top: 20px; border-top: 1px solid #555; padding-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Pokolgép Albumok</h1>
+
+  <div id="albumok"></div>
+  <div class="form-container">
+    <h2>Új album hozzáadása</h2>
+    <input type="text" id="zenekar" placeholder="Zenekar" value="Pokolgép" /><br />
+    <input type="text" id="cim" placeholder="Cím" /><br />
+    <input type="number" id="ev" placeholder="Év" /><br />
+    <input type="text" id="stilus" placeholder="Stílus" /><br />
+    <button onclick="ujAlbum()">➕ Hozzáadás</button>
+  </div>
+
+  <script>
+    const API = "http://localhost:3000/albumok";
+
+    async function betoltAlbumok() {
+      const res = await fetch(API);
+      const albumok = await res.json();
+      const container = document.getElementById("albumok");
+      container.innerHTML = "";
+      albumok.forEach(album => {
+        const div = document.createElement("div");
+        div.className = "album";
+        div.innerHTML = `
+          <span><strong>${album.zenekar}</strong> – ${album.cim} (${album.ev})</span>
+          <span style="width:auto">[${album.stilus}]</span>
+          <button height="35px" onclick="torolAlbum(${album.id})"><img src="data/rocktrash-removebg-preview.png" alt="" width="35px" height="35px">Törlés</button>
+          <button onclick='szerkesztAlbum(${JSON.stringify(album)})'><img src="data/pencilmetal.png" height="35px" width="35px" alt=""> Szerkesztés</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function ujAlbum() {
+      const zenekar = document.getElementById("zenekar").value;
+      const cim = document.getElementById("cim").value;
+      const ev = parseInt(document.getElementById("ev").value);
+      const stilus = document.getElementById("stilus").value;
+      if (!zenekar || !cim || !ev || !stilus) return alert("Tölts ki minden mezőt!");
+
+      await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zenekar, cim, ev, stilus })
+      });
+
+      betoltAlbumok();
+      document.getElementById("cim").value = "";
+      document.getElementById("ev").value = "";
+      document.getElementById("stilus").value = "";
+    }
+
+    async function torolAlbum(id) {
+      if (!confirm("Biztosan törlöd?")) return;
+      await fetch(`${API}/${id}`, { method: "DELETE" });
+      betoltAlbumok();
+    }
+
+    function szerkesztAlbum(album) {
+      const ujCim = prompt("Új cím:", album.cim);
+      const ujEv = prompt("Új év:", album.ev);
+      const ujStilus = prompt("Új stílus:", album.stilus);
+      if (!ujCim || !ujEv || !ujStilus) return;
+
+      fetch(`${API}/${album.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          zenekar: album.zenekar,
+          cim: ujCim,
+          ev: parseInt(ujEv),
+          stilus: ujStilus
+        })
+      }).then(betoltAlbumok);
+    }
+
+    betoltAlbumok();
+  </script>
+</body>
+</html>
